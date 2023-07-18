@@ -158,6 +158,7 @@ async fn find_todo_entries() -> Markup {
         });
 
     html! {
+
         @for _title in titles {
             div { "some title" }
         }
