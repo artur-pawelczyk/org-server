@@ -1,35 +1,38 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, collections::HashMap};
 
 use async_trait::async_trait;
 
-pub(crate) trait OrgDoc {
+pub trait OrgDoc {
     fn content(&self) -> &str;
 }
 
-pub(crate) struct LazyDoc<T: OrgDoc> {
+pub struct LazyDoc<T: OrgDoc> {
+    pub path: String,
     _marker: PhantomData<T>,
 }
 
 #[async_trait]
-pub(crate) trait OrgSource {
+pub trait OrgSource {
     type Doc: OrgDoc;
 
     async fn list(&self) -> Vec<LazyDoc<Self::Doc>>;
     async fn read(&self, doc: &LazyDoc<Self::Doc>) -> Self::Doc;
 }
 
-pub(crate) struct StaticOrgSource;
 pub(crate) struct StaticOrgDoc(pub &'static str);
-
-// impl StaticOrgDoc {
-//     pub(crate) fn from(content: impl AsRef<str>) -> Self {
-//         StaticOrgDoc(content.as_ref().to_string())
-//     }
-// }
 
 impl OrgDoc for StaticOrgDoc {
     fn content(&self) -> &str {
         self.0
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct StaticOrgSource(HashMap<String, &'static str>);
+
+impl StaticOrgSource {
+    pub(crate) fn add_doc(&mut self, name: &str, content: &'static str) {
+        self.0.insert(name.to_string(), content);
     }
 }
 
@@ -38,10 +41,10 @@ impl OrgSource for StaticOrgSource {
     type Doc = StaticOrgDoc;
 
     async fn list(&self) -> Vec<LazyDoc<Self::Doc>> {
-        todo!()
+        self.0.keys().map(|name| LazyDoc{ path: name.clone(), _marker: PhantomData }).collect()
     }
 
-    async fn read(&self, doc: &LazyDoc<Self::Doc>) -> Self::Doc {
+    async fn read(&self, _doc: &LazyDoc<Self::Doc>) -> Self::Doc {
         todo!()
     }
 }

@@ -1,10 +1,12 @@
 mod doc;
+mod empty_doc;
 mod render;
-
-use org_server::Server;
+pub mod server;
 
 use crate::doc::StaticOrgDoc;
+use crate::empty_doc::EmptyOrgSource;
 use crate::render::DocRender;
+use crate::server::Server;
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,7 +14,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", doc.render());
 
     let server = Server{ port: 8080 };
-    server.start().await?;
+    server.start(EmptyOrgSource).await?;
 
     Ok(())
 }

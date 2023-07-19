@@ -20,4 +20,3 @@ reqwest = "0.11.18"
 serde = { version = "1.0.166", features = ["derive"] }
 tokio = { version = "1.29.1", features = ["full"] }
 xml = "0.8.10"
-
