@@ -1,10 +1,10 @@
-use org_server::empty_doc::EmptyOrgSource;
+use org_server::{empty_doc::EmptyOrgSource, doc::{OrgSource, StaticOrgSource}};
 use reqwest::StatusCode;
 use tokio::task::JoinHandle;
 
 #[tokio::test]
 async fn test_connect() {
-    let handle = prepare_server().await;
+    let handle = prepare_server(EmptyOrgSource).await;
 
     let resp = reqwest::get("http://0.0.0.0:8080")
         .await.unwrap();
@@ -17,7 +17,7 @@ async fn test_connect() {
 
 #[tokio::test]
 async fn test_doc_not_found() {
-    let handle = prepare_server().await;
+    let handle = prepare_server(EmptyOrgSource).await;
 
     let resp = reqwest::get("http://0.0.0.0:8080/tasks.org")
         .await.unwrap();
@@ -27,11 +27,25 @@ async fn test_doc_not_found() {
     handle.abort();
 }
 
+#[tokio::test]
+async fn test_static_org_source() {
+    let mut source = StaticOrgSource::default();
+    source.add_doc("tasks.org", "content");
+    let handle = prepare_server(source).await;
+
+    let resp = reqwest::get("http://0.0.0.0:8080/tasks.org")
+        .await.unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    handle.abort();
+}
+
 #[must_use]
-async fn prepare_server() -> JoinHandle<()> {
+async fn prepare_server(source: impl OrgSource + 'static) -> JoinHandle<()> {
     let app = org_server::server::Server{ port: 8080 };
     let handle = tokio::spawn(async move {
-        app.start(Box::new(EmptyOrgSource)).await.unwrap();
+        app.start(Box::new(source)).await.unwrap();
     });
 
     wait_for_server().await;

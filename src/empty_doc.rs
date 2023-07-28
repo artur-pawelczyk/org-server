@@ -7,14 +7,12 @@ pub struct EmptyDoc;
 
 #[async_trait]
 impl OrgSource for EmptyOrgSource {
-    type Doc = EmptyDoc;
-
-    async fn list(&self) -> Vec<LazyDoc<Self::Doc>> {
+    async fn list(&self) -> Vec<LazyDoc> {
         vec![]
     }
 
-    async fn read(&self, _: &LazyDoc<Self::Doc>) -> Self::Doc {
-        EmptyDoc
+    async fn read(&self, _: &LazyDoc) -> &dyn OrgDoc {
+        &EmptyDoc
     }
 }
 
