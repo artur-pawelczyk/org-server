@@ -12,7 +12,7 @@ pub struct LazyDoc<T: OrgDoc> {
 }
 
 #[async_trait]
-pub trait OrgSource {
+pub trait OrgSource: Send + Sync {
     type Doc: OrgDoc;
 
     async fn list(&self) -> Vec<LazyDoc<Self::Doc>>;

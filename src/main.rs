@@ -14,7 +14,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", doc.render());
 
     let server = Server{ port: 8080 };
-    server.start(EmptyOrgSource).await?;
+    server.start(Box::new(EmptyOrgSource)).await?;
 
     Ok(())
 }

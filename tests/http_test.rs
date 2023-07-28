@@ -31,7 +31,7 @@ async fn test_doc_not_found() {
 async fn prepare_server() -> JoinHandle<()> {
     let app = org_server::server::Server{ port: 8080 };
     let handle = tokio::spawn(async move {
-        app.start(EmptyOrgSource).await.unwrap();
+        app.start(Box::new(EmptyOrgSource)).await.unwrap();
     });
 
     wait_for_server().await;
