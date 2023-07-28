@@ -40,10 +40,10 @@ async fn render_index(State(source): State<&'static dyn OrgSource>) -> Markup {
     }
 }
 
-async fn render_doc(State(source): State<&'static dyn OrgSource>, extract::Path(filename): extract::Path<String>) -> StatusCode {
-    if let Some(doc_ref) = source.list().await.iter().find(|doc| dbg!(doc).path == filename) {
-        StatusCode::OK
+async fn render_doc(State(source): State<&'static dyn OrgSource>, extract::Path(filename): extract::Path<String>) -> Result<String, StatusCode> {
+    if let Some(doc_ref) = source.list().await.iter().find(|doc| doc.path == filename) {
+        Ok(String::from(source.read(&doc_ref).await.content()))
     } else {
-        StatusCode::NOT_FOUND
+        Err(StatusCode::NOT_FOUND)
     }
 }

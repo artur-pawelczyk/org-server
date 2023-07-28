@@ -30,13 +30,21 @@ async fn test_doc_not_found() {
 #[tokio::test]
 async fn test_static_org_source() {
     let mut source = StaticOrgSource::default();
-    source.add_doc("tasks.org", "content");
+    source.add_doc("tasks.org", "the content");
     let handle = prepare_server(source).await;
+
+    let resp = reqwest::get("http://0.0.0.0:8080/")
+        .await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let text = resp.text().await.unwrap();
+    assert!(text.contains("tasks.org"));
 
     let resp = reqwest::get("http://0.0.0.0:8080/tasks.org")
         .await.unwrap();
-
     assert_eq!(resp.status(), StatusCode::OK);
+    let text = resp.text().await.unwrap();
+    assert!(text.contains("the content"));
+
 
     handle.abort();
 }

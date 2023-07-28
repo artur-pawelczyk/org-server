@@ -26,11 +26,12 @@ impl OrgDoc for StaticOrgDoc {
 }
 
 #[derive(Default)]
-pub struct StaticOrgSource(HashMap<String, &'static str>);
+pub struct StaticOrgSource(HashMap<String, StaticOrgDoc>);
 
 impl StaticOrgSource {
+    #[allow(dead_code)]
     pub fn add_doc(&mut self, name: &str, content: &'static str) {
-        self.0.insert(name.to_string(), content);
+        self.0.insert(name.to_string(), StaticOrgDoc(content));
     }
 }
 
@@ -40,7 +41,7 @@ impl OrgSource for StaticOrgSource {
         self.0.keys().map(|name| LazyDoc{ path: name.clone() }).collect()
     }
 
-    async fn read(&self, _doc: &LazyDoc) -> &dyn OrgDoc {
-        todo!()
+    async fn read(&self, doc: &LazyDoc) -> &dyn OrgDoc {
+        self.0.get(&doc.path).expect("It shouldn't fail because 'list' was called first")
     }
 }
