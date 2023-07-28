@@ -1,6 +1,6 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
-use axum::{Router, routing, extract::{State, Path, self}, response::Response};
+use axum::{Router, routing, extract, extract::State};
 use maud::{html, Markup};
 use reqwest::StatusCode;
 use crate::{doc::OrgSource, empty_doc::EmptyOrgSource};
@@ -13,8 +13,8 @@ impl Server {
     pub async fn start(&self, source: EmptyOrgSource) -> Result<(), Box<dyn std::error::Error>> {
         let state = Arc::new(source);
         let app = Router::new()
-            .route("/", routing::get(render_index))
-            .route("/:filename", routing::get(render_doc))
+            .route("/", routing::get(render_index::<EmptyOrgSource>))
+            .route("/:filename", routing::get(render_doc::<EmptyOrgSource>))
             .with_state(Arc::clone(&state));
 
         let addr = ([0, 0, 0, 0], self.port);
@@ -26,7 +26,7 @@ impl Server {
     }
 }
 
-async fn render_index(State(source): State<Arc<EmptyOrgSource>>) -> Markup {
+async fn render_index<S: OrgSource>(State(source): State<Arc<S>>) -> Markup {
     // let mut store = StaticOrgSource::default();
     // store.add_doc("tasks.org", "* TODO First task\n* TODO Next task");
     // store.add_doc("reference.org", "* Links\n** Interesting articles");
@@ -42,6 +42,6 @@ async fn render_index(State(source): State<Arc<EmptyOrgSource>>) -> Markup {
     }
 }
 
-async fn render_doc(State(source): State<Arc<EmptyOrgSource>>, extract::Path(filename): extract::Path<String>) -> StatusCode {
+async fn render_doc<S>(State(_source): State<Arc<S>>, extract::Path(_filename): extract::Path<String>) -> StatusCode {
     StatusCode::NOT_FOUND
 }
