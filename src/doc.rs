@@ -6,15 +6,10 @@ pub trait OrgDoc {
     fn content(&self) -> &str;
 }
 
-#[derive(Debug)]
-pub struct LazyDoc {
-    pub path: String,
-}
-
 #[async_trait]
 pub trait OrgSource: Send + Sync {
-    async fn list(&self) -> Vec<LazyDoc>;
-    async fn read(&self, doc: &LazyDoc) -> &dyn OrgDoc;
+    async fn list(&self) -> Vec<String>;
+    async fn read(&self, doc: &str) -> &dyn OrgDoc;
 }
 
 pub(crate) struct StaticOrgDoc(pub &'static str);
@@ -37,11 +32,11 @@ impl StaticOrgSource {
 
 #[async_trait]
 impl OrgSource for StaticOrgSource {
-    async fn list(&self) -> Vec<LazyDoc> {
-        self.0.keys().map(|name| LazyDoc{ path: name.clone() }).collect()
+    async fn list(&self) -> Vec<String> {
+        self.0.keys().map(String::from).collect()
     }
 
-    async fn read(&self, doc: &LazyDoc) -> &dyn OrgDoc {
-        self.0.get(&doc.path).expect("It shouldn't fail because 'list' was called first")
+    async fn read(&self, doc: &str) -> &dyn OrgDoc {
+        self.0.get(doc).expect("It shouldn't fail because 'list' was called first")
     }
 }
