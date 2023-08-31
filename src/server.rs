@@ -1,14 +1,14 @@
 use axum::{Router, routing, extract, extract::State};
 use maud::{html, Markup};
 use reqwest::StatusCode;
-use crate::doc::OrgSource;
+use crate::doc::{OrgSource, OrgDoc};
 
 pub struct Server {
     pub port: u16,
 }
 
 impl Server {
-    pub async fn start(&self, source: Box<dyn OrgSource>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn start<D: OrgDoc + 'static>(&self, source: Box<dyn OrgSource<Doc = D>>) -> Result<(), Box<dyn std::error::Error>> {
         let state = Box::leak(source);
         let app = Router::new()
             .route("/", routing::get(render_index))
@@ -24,7 +24,7 @@ impl Server {
     }
 }
 
-async fn render_index(State(source): State<&'static dyn OrgSource>) -> Markup {
+async fn render_index<D: OrgDoc>(State(source): State<&'static dyn OrgSource<Doc = D>>) -> Markup {
     // let mut store = StaticOrgSource::default();
     // store.add_doc("tasks.org", "* TODO First task\n* TODO Next task");
     // store.add_doc("reference.org", "* Links\n** Interesting articles");
@@ -40,7 +40,10 @@ async fn render_index(State(source): State<&'static dyn OrgSource>) -> Markup {
     }
 }
 
-async fn render_doc(State(source): State<&'static dyn OrgSource>, extract::Path(filename): extract::Path<String>) -> Result<String, StatusCode> {
+async fn render_doc<D>(State(source): State<&'static dyn OrgSource<Doc = D>>,
+                       extract::Path(filename): extract::Path<String>
+) -> Result<String, StatusCode>
+where D: OrgDoc {
     if let Some(doc_ref) = source.list().await.iter().find(|doc| doc == &&filename) {
         Ok(String::from(source.read(&doc_ref).await.content()))
     } else {
