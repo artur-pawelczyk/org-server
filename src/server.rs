@@ -43,10 +43,9 @@ async fn render_index<D: OrgDoc>(State(source): State<&'static dyn OrgSource<Doc
 async fn render_doc<D>(State(source): State<&'static dyn OrgSource<Doc = D>>,
                        extract::Path(filename): extract::Path<String>
 ) -> Result<String, StatusCode>
-where D: OrgDoc {
-    if let Some(doc_ref) = source.list().await.iter().find(|doc| doc == &&filename) {
-        Ok(String::from(source.read(&doc_ref).await.content()))
-    } else {
-        Err(StatusCode::NOT_FOUND)
-    }
+where D: OrgDoc
+{
+    source.read(&filename).await
+        .map(|doc| doc.content().to_string())
+        .map_err(|_| StatusCode::NOT_FOUND)
 }

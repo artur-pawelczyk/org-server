@@ -13,8 +13,8 @@ impl OrgSource for EmptyOrgSource {
         vec![]
     }
 
-    async fn read(&self, _: &str) -> EmptyDoc {
-        EmptyDoc
+    async fn read(&self, _: &str) -> Result<EmptyDoc, ()> {
+        Err(())
     }
 }
 

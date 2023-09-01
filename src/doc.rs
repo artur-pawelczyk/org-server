@@ -11,7 +11,7 @@ pub trait OrgSource: Send + Sync {
     type Doc: OrgDoc;
 
     async fn list(&self) -> Vec<String>;
-    async fn read(&self, doc: &str) -> Self::Doc;
+    async fn read(&self, doc: &str) -> Result<Self::Doc, ()>;
 }
 
 #[derive(Clone)]
@@ -41,7 +41,7 @@ impl OrgSource for StaticOrgSource {
         self.0.keys().map(String::from).collect()
     }
 
-    async fn read(&self, doc: &str) -> StaticOrgDoc {
-        self.0.get(doc).cloned().expect("It shouldn't fail because 'list' was called first")
+    async fn read(&self, doc: &str) -> Result<StaticOrgDoc, ()> {
+        self.0.get(doc).cloned().ok_or(())
     }
 }
