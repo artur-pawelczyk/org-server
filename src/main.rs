@@ -1,5 +1,6 @@
 mod doc;
 mod empty_doc;
+mod fs_doc;
 mod render;
 pub mod server;
 
