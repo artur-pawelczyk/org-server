@@ -28,14 +28,15 @@ impl<'a> FilesystemSource<'a> {
 impl OrgSource for FilesystemSource<'_> {
     type Doc = FilesystemDoc;
 
-    // TODO: Don't return actual absolute path. This is a security problem.
     async fn list(&self) -> Vec<String> {
         if let Ok(contents) = read_dir(self.0).await {
             let mut res = Vec::new();
             let mut stream = ReadDirStream::new(contents);
             while let Some(Ok(file)) = stream.next().await {
                 if file.path().extension().map(|ext| ext == "org").unwrap_or(false) {
-                    res.push(file.path().as_os_str().to_str().unwrap().to_string());
+                    if let Some(filename) = file.path().file_name().and_then(|s| s.to_str()) {
+                        res.push(format!("/{filename}"));
+                    }
                 }
             }
 
@@ -79,7 +80,19 @@ mod tests {
                 Box::leak(Box::new(full))
             }
         };
-    }    
+    }
+
+    macro_rules! set {
+        ($($x:expr),*) => {
+            {
+                let mut s: BTreeSet<String> = std::collections::BTreeSet::new();
+                $(
+                    s.insert($x.to_string());
+                )*
+                s
+            }
+        }
+    }
 
     #[tokio::test]
     async fn test_no_files_found() {
@@ -91,12 +104,12 @@ mod tests {
     #[tokio::test]
     async fn test_some_files_found() {
         let dir = tempdir().unwrap();
-        let org_files: BTreeSet<String> = make_files(dir.path(), &["tasks.org", "events.org"]);
-        let _non_org_files: BTreeSet<String> = make_files(dir.path(), &["tasks.pdf", "events.pdf"]);
+        make_files(dir.path(), &["tasks.org", "events.org"]);
+        make_files(dir.path(), &["tasks.pdf", "events.pdf"]);
 
         let source = FilesystemSource::new(dir.path());
         let docs: BTreeSet<String> = source.list().await.iter().cloned().collect();
-        assert_eq!(docs, org_files);
+        assert_eq!(docs, set!("/tasks.org", "/events.org"));
     }
 
     #[tokio::test]
@@ -123,19 +136,20 @@ mod tests {
         assert!(source.read(path_str!(other_dir.path(), "tasks.org")).await.is_err());
     }
 
-    fn make_files<O: FromIterator<String>>(root: &Path, names: &[&str]) -> O {
-        names.iter().map(|name| {
+    fn make_files(root: &Path, names: &[&str]) {
+        for name in names {
             File::create(root.join(name)).unwrap();
-            String::from(root.join(name).as_os_str().to_str().unwrap())
-        }).collect()
+        }
     }
 
     #[tokio::test]
     async fn test_doc_name() {
         let dir = tempdir().unwrap();
-        let files: Vec<String> = make_files(dir.path(), &["tasks.org", "events.org"]);
+        make_files(dir.path(), &["tasks.org", "events.org"]);
         let source = FilesystemSource::new(dir.path());
 
-        assert_eq!(source.doc_name(&files[0]), "tasks.org");
+        let files = source.list().await;
+        let names = files.iter().map(|name| source.doc_name(name)).collect::<BTreeSet<String>>();
+        assert_eq!(names, set!("tasks.org", "events.org"));
     }
 }
