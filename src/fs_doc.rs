@@ -32,7 +32,9 @@ impl OrgSource for FilesystemSource<'_> {
             let mut res = Vec::new();
             let mut stream = ReadDirStream::new(contents);
             while let Some(Ok(file)) = stream.next().await {
-                res.push(file.path().as_os_str().to_str().unwrap().to_string());
+                if file.path().extension().map(|ext| ext == "org").unwrap_or(false) {
+                    res.push(file.path().as_os_str().to_str().unwrap().to_string());
+                }
             }
 
             res
@@ -81,15 +83,12 @@ mod tests {
     #[tokio::test]
     async fn test_some_files_found() {
         let dir = tempdir().unwrap();
-        let files: BTreeSet<String> = ["tasks.org", "events.org"].iter()
-            .map(|name| {
-                File::create(dir.path().join(name)).unwrap();
-                String::from(dir.path().join(name).as_os_str().to_str().unwrap())
-            }).collect();
+        let org_files: BTreeSet<String> = make_files(dir.path(), &["tasks.org", "events.org"]);
+        let _non_org_files: BTreeSet<String> = make_files(dir.path(), &["tasks.pdf", "events.pdf"]);
 
         let source = FilesystemSource::new(dir.path());
         let docs: BTreeSet<String> = source.list().await.iter().cloned().collect();
-        assert_eq!(docs, files);
+        assert_eq!(docs, org_files);
     }
 
     #[tokio::test]
@@ -114,5 +113,12 @@ mod tests {
 
         assert!(source.read(path_str!(source_dir.path(), "tasks.org")).await.is_err());
         assert!(source.read(path_str!(other_dir.path(), "tasks.org")).await.is_err());
+    }
+
+    fn make_files<O: FromIterator<String>>(root: &Path, names: &[&str]) -> O {
+        names.iter().map(|name| {
+            File::create(root.join(name)).unwrap();
+            String::from(root.join(name).as_os_str().to_str().unwrap())
+        }).collect()
     }
 }
