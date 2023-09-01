@@ -1,7 +1,8 @@
 use axum::{Router, routing, extract, extract::State};
 use maud::{html, Markup};
 use reqwest::StatusCode;
-use crate::doc::{OrgSource, OrgDoc};
+
+use crate::doc::{OrgDoc, OrgSource};
 
 pub struct Server {
     pub port: u16,
@@ -25,16 +26,12 @@ impl Server {
 }
 
 async fn render_index<D: OrgDoc>(State(source): State<&'static dyn OrgSource<Doc = D>>) -> Markup {
-    // let mut store = StaticOrgSource::default();
-    // store.add_doc("tasks.org", "* TODO First task\n* TODO Next task");
-    // store.add_doc("reference.org", "* Links\n** Interesting articles");
-    
     let docs = source.list().await;
 
     html! {
         ul {
             @for doc in docs {
-                li { (doc) }
+                li { a href = (doc) { (source.doc_name(&doc)) } }
             }
         }
     }

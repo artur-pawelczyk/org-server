@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 
 use async_trait::async_trait;
@@ -12,6 +13,10 @@ pub trait OrgSource: Send + Sync {
 
     async fn list(&self) -> Vec<String>;
     async fn read(&self, doc: &str) -> Result<Self::Doc, ()>;
+
+    fn doc_name(&self, doc: &str) -> String {
+        String::from(doc)
+    }
 }
 
 #[derive(Clone)]

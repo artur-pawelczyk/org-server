@@ -4,18 +4,17 @@ mod fs_doc;
 mod render;
 pub mod server;
 
-use crate::doc::StaticOrgDoc;
-use crate::empty_doc::EmptyOrgSource;
-use crate::render::DocRender;
-use crate::server::Server;
+use std::path::Path;
+
+use fs_doc::FilesystemSource;
+use server::Server;
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let doc = StaticOrgDoc("* Main heading\n** Sub-heading");
-    println!("{}", doc.render());
+    let source = FilesystemSource::new(Path::new("/home/artur/org"));
 
     let server = Server{ port: 8080 };
-    server.start(Box::new(EmptyOrgSource)).await?;
+    server.start(Box::new(source)).await?;
 
     Ok(())
 }

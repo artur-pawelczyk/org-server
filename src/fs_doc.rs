@@ -1,14 +1,15 @@
 use std::path::Path;
 
 use async_trait::async_trait;
-use org_server::doc::{OrgSource, OrgDoc};
 use tokio::{fs::{read_dir, File as AsyncFile}, io::AsyncReadExt};
 use tokio_stream::wrappers::ReadDirStream;
 use futures_util::stream::StreamExt;
 
-struct FilesystemSource<'a>(&'a Path);
+use crate::doc::{OrgDoc, OrgSource};
 
-struct FilesystemDoc(String);
+pub struct FilesystemSource<'a>(&'a Path);
+
+pub struct FilesystemDoc(String);
 
 impl OrgDoc for FilesystemDoc {
     fn content(&self) -> &str {
@@ -27,6 +28,7 @@ impl<'a> FilesystemSource<'a> {
 impl OrgSource for FilesystemSource<'_> {
     type Doc = FilesystemDoc;
 
+    // TODO: Don't return actual absolute path. This is a security problem.
     async fn list(&self) -> Vec<String> {
         if let Ok(contents) = read_dir(self.0).await {
             let mut res = Vec::new();
@@ -53,6 +55,12 @@ impl OrgSource for FilesystemSource<'_> {
         } else {
             Err(())
         }
+    }
+
+    fn doc_name(&self, doc: &str) -> String {
+        Path::new(doc).file_name()
+            .map(|s| s.to_str().expect("Path has to be a valid string").to_string())
+            .expect("Has to be a vaild name")
     }
 }
 
@@ -120,5 +128,14 @@ mod tests {
             File::create(root.join(name)).unwrap();
             String::from(root.join(name).as_os_str().to_str().unwrap())
         }).collect()
+    }
+
+    #[tokio::test]
+    async fn test_doc_name() {
+        let dir = tempdir().unwrap();
+        let files: Vec<String> = make_files(dir.path(), &["tasks.org", "events.org"]);
+        let source = FilesystemSource::new(dir.path());
+
+        assert_eq!(source.doc_name(&files[0]), "tasks.org");
     }
 }
