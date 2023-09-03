@@ -11,7 +11,8 @@ use server::Server;
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let source = FilesystemSource::new(Path::new("/home/artur/org"));
+    let org_files_path = Box::leak(Box::new(Path::new("examples/org").canonicalize()?));
+    let source = FilesystemSource::new(org_files_path.as_path());
 
     let server = Server{ port: 8080 };
     server.start(Box::new(source)).await?;

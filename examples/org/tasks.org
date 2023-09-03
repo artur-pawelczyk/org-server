@@ -1,0 +1,6 @@
+* Shopping
+:PROPERTIES:
+:CATEGORY: Shopping
+:END:
+** SOME Buy a new pen                                                   :buy:
+** NEXT Buy groceries                                                   :buy:

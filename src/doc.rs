@@ -43,10 +43,11 @@ impl OrgSource for StaticOrgSource {
     type Doc = StaticOrgDoc;
 
     async fn list(&self) -> Vec<String> {
-        self.0.keys().map(String::from).collect()
+        self.0.keys().map(|key| format!("/{key}")).collect()
     }
 
     async fn read(&self, doc: &str) -> Result<StaticOrgDoc, ()> {
+        let doc = &doc[1..];
         self.0.get(doc).cloned().ok_or(())
     }
 }

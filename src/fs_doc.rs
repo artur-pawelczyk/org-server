@@ -47,15 +47,13 @@ impl OrgSource for FilesystemSource<'_> {
     }
 
     async fn read(&self, doc: &str) -> Result<Self::Doc, ()> {
-        let path = Path::new(doc);
-        if path.starts_with(self.0) {
-            let mut content = String::new();
-            AsyncFile::open(path).await.map_err(|_| ())?
-                .read_to_string(&mut content).await.map_err(|_| ())?;
-            Ok(FilesystemDoc(content))
-        } else {
-            Err(())
-        }
+        let doc = Path::new(doc).file_name().ok_or(())?;
+        let path = dbg!(self.0.join(doc));
+        let mut content = String::new();
+        AsyncFile::open(path).await.map_err(|_| ())?
+            .read_to_string(&mut content).await.map_err(|_| ())?;
+
+        Ok(FilesystemDoc(content))
     }
 
     fn doc_name(&self, doc: &str) -> String {
@@ -115,12 +113,11 @@ mod tests {
     #[tokio::test]
     async fn test_file_contents() {
         let dir = tempdir().unwrap();
-        let tasks_file_path = dir.path().join("tasks.org").as_os_str().to_str().unwrap().to_string();
         let mut tasks_file = File::create(dir.path().join("tasks.org")).unwrap();
         write!(tasks_file, "* Heading").unwrap();
-        
+
         let source = FilesystemSource::new(dir.path());
-        let doc = source.read(&tasks_file_path).await.unwrap();
+        let doc = source.read("/tasks.org").await.unwrap();
 
         assert_eq!(doc.content(), "* Heading");
     }
