@@ -1,5 +1,6 @@
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
+
 
 use async_trait::async_trait;
 
@@ -47,7 +48,8 @@ impl OrgSource for StaticOrgSource {
     }
 
     async fn read(&self, doc: &str) -> Result<StaticOrgDoc, ()> {
-        let doc = &doc[1..];
+        let path = Path::new(doc).file_name().ok_or(())?;
+        let doc = path.to_str().ok_or(())?;
         self.0.get(doc).cloned().ok_or(())
     }
 }
