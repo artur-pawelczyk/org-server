@@ -48,7 +48,7 @@ impl OrgSource for FilesystemSource<'_> {
 
     async fn read(&self, doc: &str) -> Result<Self::Doc, ()> {
         let doc = Path::new(doc).file_name().ok_or(())?;
-        let path = dbg!(self.0.join(doc));
+        let path = self.0.join(doc);
         let mut content = String::new();
         AsyncFile::open(path).await.map_err(|_| ())?
             .read_to_string(&mut content).await.map_err(|_| ())?;
