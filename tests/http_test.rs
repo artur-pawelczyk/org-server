@@ -53,7 +53,7 @@ async fn prepare_server(source: impl OrgSource + 'static) -> TestServer {
     println!("using port: {port}");
     let app = org_server::server::Server{ port };
     tokio::spawn(async move {
-        app.start(Box::new(source)).await.unwrap();
+        app.start(source).await.unwrap();
     });
 
     let server = TestServer { port };

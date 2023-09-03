@@ -15,7 +15,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source = FilesystemSource::new(org_files_path.as_path());
 
     let server = Server{ port: 8080 };
-    server.start(Box::new(source)).await?;
+    server.start(source).await?;
 
     Ok(())
 }

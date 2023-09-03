@@ -9,8 +9,11 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn start<D: OrgDoc + 'static>(&self, source: Box<dyn OrgSource<Doc = D>>) -> Result<(), Box<dyn std::error::Error>> {
-        let state = Box::leak(source);
+    pub async fn start<D, S>(&self, source: S) -> Result<(), Box<dyn std::error::Error>>
+    where D: OrgDoc + 'static,
+          S: OrgSource<Doc = D> + 'static
+    {
+        let state = Box::leak(Box::new(source));
         let app = Router::new()
             .route("/", routing::get(render_index))
             .route("/:filename", routing::get(render_doc))
@@ -25,7 +28,10 @@ impl Server {
     }
 }
 
-async fn render_index<D: OrgDoc>(State(source): State<&'static dyn OrgSource<Doc = D>>) -> Markup {
+async fn render_index<D, S>(State(source): State<&S>) -> Markup
+where D: OrgDoc,
+      S: OrgSource<Doc = D>
+{
     let docs: Vec<_> = source.list().await.iter()
         .map(|doc| (source.doc_name(&doc), format!("{doc}")))
         .collect();
@@ -39,10 +45,10 @@ async fn render_index<D: OrgDoc>(State(source): State<&'static dyn OrgSource<Doc
     }
 }
 
-async fn render_doc<D>(State(source): State<&'static dyn OrgSource<Doc = D>>,
-                       extract::Path(filename): extract::Path<String>
-) -> Result<String, StatusCode>
-where D: OrgDoc
+async fn render_doc<D, S>(State(source): State<&S>,
+                       extract::Path(filename): extract::Path<String>) -> Result<String, StatusCode>
+where D: OrgDoc,
+      S: OrgSource<Doc = D>
 {
     let filename = format!("/{filename}");
     source.read(&filename).await
