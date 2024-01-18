@@ -41,6 +41,18 @@ async fn test_static_org_source() {
     assert!(text.contains("the content"));
 }
 
+#[tokio::test]
+async fn test_list_todo() {
+    let mut source = StaticOrgSource::default();
+    source.add_doc("tasks.org", "* TODO Get stuff");
+    let TestServer { port } = prepare_server(source).await;
+
+    let resp = reqwest::get(format!("http://0.0.0.0:{port}/todo/TODO")).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let text = resp.text().await.unwrap();
+    assert_eq!(text, "<ol><li>Get stuff</li></ol>");
+}
+
 static PORT_NUMBER: AtomicU16 = AtomicU16::new(8000);
 
 struct TestServer {

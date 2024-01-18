@@ -1,8 +1,8 @@
-use axum::{Router, routing, extract, extract::State};
+use axum::{Router, routing, extract, extract::State, http::StatusCode};
 use maud::{html, Markup};
-use reqwest::StatusCode;
+use futures::stream::{self, StreamExt};
 
-use crate::doc::{OrgDoc, OrgSource};
+use crate::{doc::{OrgDoc, OrgSource}, parser};
 
 pub struct Server {
     pub port: u16,
@@ -17,6 +17,7 @@ impl Server {
         let app = Router::new()
             .route("/", routing::get(render_index))
             .route("/:filename", routing::get(render_doc))
+            .route("/todo/TODO", routing::get(list_todos))
             .with_state(state);
 
         let addr = ([0, 0, 0, 0], self.port);
@@ -54,4 +55,23 @@ where D: OrgDoc,
     source.read(&filename).await
         .map(|doc| doc.content().to_string())
         .map_err(|_| StatusCode::NOT_FOUND)
+}
+
+async fn list_todos<D, S>(State(source): State<&S>) -> Result<String, StatusCode>
+where D: OrgDoc,
+      S: OrgSource<Doc = D>
+{
+    for path in source.list().await {
+        let content = source.read(&path).await.unwrap().content().to_string();
+        println!("{path}: {content}");
+    }
+
+    let items: String = stream::iter(source.list().await.iter())
+        .then(|path| source.read(path))
+        .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content())))
+        .map(|todo_item| format!("<li>{}</li>", todo_item.heading()))
+        .collect().await;
+
+
+    Ok(format!("<ol>{}</ol>", items))
 }

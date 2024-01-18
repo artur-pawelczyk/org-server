@@ -7,7 +7,7 @@ impl TodoItem {
         &self.1
     }
 
-    fn heading(&self) -> &str {
+    pub fn heading(&self) -> &str {
         &self.2
     }
 
@@ -49,9 +49,9 @@ impl<'a> Iterator for TodoItemIter<'a> {
     }
 }
 
-pub fn doc_to_items<'a>(doc: &'a str) -> TodoItemIter {
+pub fn doc_to_items(doc: &str) -> Vec<TodoItem> {
     let parsed = Org::parse(doc);
-    TodoItemIter::new(parsed)
+    TodoItemIter::new(parsed).collect()
 }
 
 #[cfg(test)]
@@ -61,11 +61,11 @@ mod tests {
     #[test]
     fn test_doc_with_no_headings() {
         let doc = "";
-        let items = doc_to_items(doc).count();
+        let items = doc_to_items(doc).len();
         assert_eq!(items, 0);
 
         let doc = "some free content"; 
-        let items = doc_to_items(doc).count();
+        let items = doc_to_items(doc).len();
         assert_eq!(items, 0);
     }
 
@@ -75,7 +75,7 @@ mod tests {
 * TODO First task
 * TODO Second task";
 
-        let items: Vec<_> = doc_to_items(doc).collect();
+        let items: Vec<_> = doc_to_items(doc);
         assert_eq!(items.len(), 2);
 
         assert_eq!(items[0].level(), 1);

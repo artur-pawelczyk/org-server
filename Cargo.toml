@@ -12,6 +12,7 @@ strip = true
 async-trait = "0.1.70"
 axum = { version = "0.6.18", features = ["headers"] }
 config = { version = "0.13.3", features = ["toml"] }
+futures = "0.3.30"
 futures-util = "0.3.28"
 lazy_static = "1.4.0"
 maud = { version = "0.25.0", features = ["axum"] }
