@@ -36,7 +36,6 @@ impl<'a> Iterator for TodoItemIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.headlines.pop().and_then(|headline| {
             let title = headline.title(&self.doc);
-            dbg!(&title);
             if let Some(keyword) = title.keyword.as_ref() {
                 Some(TodoItem(
                     headline.level(),

@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicU16, Ordering};
 
 use org_server::{empty_doc::EmptyOrgSource, doc::{OrgSource, StaticOrgSource}};
 use reqwest::StatusCode;
+use scraper::{Html, Selector, ElementRef};
 
 
 #[tokio::test]
@@ -44,13 +45,22 @@ async fn test_static_org_source() {
 #[tokio::test]
 async fn test_list_todo() {
     let mut source = StaticOrgSource::default();
-    source.add_doc("tasks.org", "* TODO Get stuff");
+    source.add_doc("tasks.org", "
+* TODO Get stuff
+* TODO Do stuff
+");
     let TestServer { port } = prepare_server(source).await;
 
     let resp = reqwest::get(format!("http://0.0.0.0:{port}/todo/TODO")).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    let text = resp.text().await.unwrap();
-    assert_eq!(text, "<ol><li>Get stuff</li></ol>");
+    let html = Html::parse_fragment(&resp.text().await.unwrap());
+
+    let selector = Selector::parse("ol > li").unwrap();
+    let elements: Vec<String> = html.select(&selector)
+        .map(element_to_text)
+        .collect();
+
+    assert_eq!(elements, ["Get stuff", "Do stuff"]);
 }
 
 static PORT_NUMBER: AtomicU16 = AtomicU16::new(8000);
@@ -80,4 +90,8 @@ async fn wait_for_server(TestServer { port }: &TestServer) {
             Err(_) => continue,
         }
     }
+}
+
+fn element_to_text(element: ElementRef) -> String {
+    element.text().collect()
 }

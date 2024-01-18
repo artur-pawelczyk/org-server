@@ -1,4 +1,5 @@
 use axum::{Router, routing, extract, extract::State, http::StatusCode};
+use futures_util::future;
 use maud::{html, Markup};
 use futures::stream::{self, StreamExt};
 
@@ -17,7 +18,7 @@ impl Server {
         let app = Router::new()
             .route("/", routing::get(render_index))
             .route("/:filename", routing::get(render_doc))
-            .route("/todo/TODO", routing::get(list_todos))
+            .route("/todo/:keyword", routing::get(list_todos))
             .with_state(state);
 
         let addr = ([0, 0, 0, 0], self.port);
@@ -57,15 +58,11 @@ where D: OrgDoc,
         .map_err(|_| StatusCode::NOT_FOUND)
 }
 
-async fn list_todos<D, S>(State(source): State<&S>) -> Result<String, StatusCode>
+async fn list_todos<D, S>(State(source): State<&S>,
+                          extract::Path(keyword): extract::Path<String>) -> Result<String, StatusCode>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
-    for path in source.list().await {
-        let content = source.read(&path).await.unwrap().content().to_string();
-        println!("{path}: {content}");
-    }
-
     let items: String = stream::iter(source.list().await.iter())
         .then(|path| source.read(path))
         .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content())))

@@ -25,4 +25,5 @@ tokio-stream = { version = "0.1.14", features = ["fs"] }
 xml = "0.8.10"
 
 [dev-dependencies]
+scraper = "0.18.1"
 tempfile = "3.8.0"
