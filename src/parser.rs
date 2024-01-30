@@ -1,9 +1,10 @@
 use orgize::{Org, Headline};
 
+#[derive(Debug)]
 pub struct TodoItem(usize, String, String);
 
 impl TodoItem {
-    fn keyword(&self) -> &str {
+    pub fn keyword(&self) -> &str {
         &self.1
     }
 

@@ -47,6 +47,7 @@ async fn test_list_todo() {
     let mut source = StaticOrgSource::default();
     source.add_doc("tasks.org", "
 * TODO Get stuff
+* DONE Buy stuff
 * TODO Do stuff
 ");
     let TestServer { port } = prepare_server(source).await;

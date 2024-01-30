@@ -1,9 +1,8 @@
 use axum::{Router, routing, extract, extract::State, http::StatusCode};
-use futures_util::future;
 use maud::{html, Markup};
 use futures::stream::{self, StreamExt};
 
-use crate::{doc::{OrgDoc, OrgSource}, parser};
+use crate::{doc::{OrgDoc, OrgSource}, parser::{self, TodoItem}};
 
 pub struct Server {
     pub port: u16,
@@ -66,8 +65,10 @@ where D: OrgDoc,
     let items: String = stream::iter(source.list().await.iter())
         .then(|path| source.read(path))
         .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content())))
+        .collect::<Vec<TodoItem>>().await.iter()
+        .filter(|item| item.keyword() == keyword)
         .map(|todo_item| format!("<li>{}</li>", todo_item.heading()))
-        .collect().await;
+        .collect();
 
 
     Ok(format!("<ol>{}</ol>", items))
