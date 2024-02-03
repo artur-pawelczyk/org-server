@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU16, Ordering};
 
-use org_server::{empty_doc::EmptyOrgSource, doc::{OrgSource, StaticOrgSource}};
+use org_server::{empty_doc::EmptyOrgSource, doc::{OrgSource, StaticOrgSource}, parser::ParserConfig};
 use reqwest::StatusCode;
 use scraper::{Html, Selector, ElementRef};
 
@@ -74,7 +74,10 @@ struct TestServer {
 async fn prepare_server(source: impl OrgSource + 'static) -> TestServer {
     let port = PORT_NUMBER.fetch_add(1, Ordering::Relaxed);
     println!("using port: {port}");
-    let app = org_server::server::Server{ port };
+    let app = org_server::server::Server{
+        port,
+        parser_config: ParserConfig::with_keywords(&["TODO"], &["DONE"]),
+    };
     tokio::spawn(async move {
         app.start(source).await.unwrap();
     });

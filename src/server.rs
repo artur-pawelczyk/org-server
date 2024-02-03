@@ -6,6 +6,16 @@ use crate::{doc::{OrgDoc, OrgSource}, parser::{self, TodoItem, ParserConfig}};
 
 pub struct Server {
     pub port: u16,
+    pub parser_config: ParserConfig,
+}
+
+impl Default for Server {
+    fn default() -> Self {
+        Server {
+            port: 8080,
+            parser_config: Default::default(),
+        }
+    }
 }
 
 impl Server {
