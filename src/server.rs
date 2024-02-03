@@ -2,7 +2,7 @@ use axum::{Router, routing, extract, extract::State, http::StatusCode, response:
 use maud::{html, Markup};
 use futures::stream::{self, StreamExt};
 
-use crate::{doc::{OrgDoc, OrgSource}, parser::{self, TodoItem}};
+use crate::{doc::{OrgDoc, OrgSource}, parser::{self, TodoItem, ParserConfig}};
 
 pub struct Server {
     pub port: u16,
@@ -62,9 +62,11 @@ async fn list_todos<D, S>(State(source): State<&S>,
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
+    let parser_conf = ParserConfig::with_keywords(&["TODO"], &["DONE"]);
+
     let items: String = stream::iter(source.list().await.iter())
         .then(|path| source.read(path))
-        .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content())))
+        .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content(), &parser_conf)))
         .collect::<Vec<TodoItem>>().await.iter()
         .filter(|item| item.keyword() == keyword)
         .map(|todo_item| format!("<li><strong>{}</strong> {}</li>", todo_item.keyword(), todo_item.heading()))

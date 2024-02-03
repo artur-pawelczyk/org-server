@@ -61,7 +61,7 @@ async fn test_list_todo() {
         .map(element_to_text)
         .collect();
 
-    assert_eq!(elements, ["Get stuff", "Do stuff"]);
+    assert_eq!(elements, ["TODO Get stuff", "TODO Do stuff"]);
 }
 
 static PORT_NUMBER: AtomicU16 = AtomicU16::new(8000);
