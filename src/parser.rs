@@ -1,4 +1,4 @@
-use orgize::{Org, Headline};
+use orgize::Org;
 
 #[derive(Debug)]
 pub struct TodoItem(usize, String, String);
@@ -17,41 +17,18 @@ impl TodoItem {
     }
 }
 
-#[derive(Default)]
-pub struct TodoItemIter<'a> {
-    doc: Org<'a>,
-    headlines: Vec<Headline>,
-}
-
-impl<'a> TodoItemIter<'a> {
-    fn new(doc: Org<'a>) -> Self {
-        let mut headlines: Vec<_> = doc.headlines().collect();
-        headlines.reverse();
-        Self{ doc, headlines }
-    }
-}
-
-impl<'a> Iterator for TodoItemIter<'a> {
-    type Item = TodoItem;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.headlines.pop().and_then(|headline| {
-            let title = headline.title(&self.doc);
-            if let Some(keyword) = title.keyword.as_ref() {
-                Some(TodoItem(
-                    headline.level(),
-                    keyword.to_string(),
-                    title.raw.to_string()))
-            } else {
-                None
-            }
-        })
-    }
-}
-
 pub fn doc_to_items(doc: &str) -> Vec<TodoItem> {
     let parsed = Org::parse(doc);
-    TodoItemIter::new(parsed).collect()
+    parsed.headlines()
+        .flat_map(|headline| {
+            let title = headline.title(&parsed);
+            title.keyword.as_ref().map(|keyword| {
+            TodoItem(headline.level(),
+                     keyword.to_string(),
+                     title.raw.to_string())
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
