@@ -1,4 +1,4 @@
-use axum::{Router, routing, extract, extract::State, http::StatusCode};
+use axum::{Router, routing, extract, extract::State, http::StatusCode, response::Html};
 use maud::{html, Markup};
 use futures::stream::{self, StreamExt};
 
@@ -58,7 +58,7 @@ where D: OrgDoc,
 }
 
 async fn list_todos<D, S>(State(source): State<&S>,
-                          extract::Path(keyword): extract::Path<String>) -> Result<String, StatusCode>
+                          extract::Path(keyword): extract::Path<String>) -> Result<Html<String>, StatusCode>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
@@ -67,9 +67,9 @@ where D: OrgDoc,
         .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content())))
         .collect::<Vec<TodoItem>>().await.iter()
         .filter(|item| item.keyword() == keyword)
-        .map(|todo_item| format!("<li>{}</li>", todo_item.heading()))
+        .map(|todo_item| format!("<li><strong>{}</strong> {}</li>", todo_item.keyword(), todo_item.heading()))
         .collect();
 
 
-    Ok(format!("<ol>{}</ol>", items))
+    Ok(Html::from(format!("<ol>{}</ol>", items)))
 }

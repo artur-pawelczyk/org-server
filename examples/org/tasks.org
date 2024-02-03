@@ -4,3 +4,4 @@
 :END:
 ** SOME Buy a new pen                                                   :buy:
 ** NEXT Buy groceries                                                   :buy:
+** DONE Order soy sauce                                            :cooking:
