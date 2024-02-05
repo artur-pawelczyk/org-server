@@ -1,21 +1,21 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, sync::Arc, borrow::Cow};
 
 use orgize::Org;
 
 #[derive(Debug)]
-pub struct TodoItem{
+pub struct TodoItem<'a> {
     level: usize,
     keyword: Arc<str>,
-    heading: String,
+    heading: &'a str,
 }
 
-impl TodoItem {
+impl<'a> TodoItem<'a> {
     pub fn keyword(&self) -> &str {
-        &self.keyword
+        self.keyword.as_ref()
     }
 
     pub fn heading(&self) -> &str {
-        &self.heading
+        self.heading
     }
 
     fn level(&self) -> usize {
@@ -69,7 +69,7 @@ pub fn doc_to_items(doc: &str, config: &ParserConfig, mut consumer: impl FnMut(T
                     TodoItem{
                         level: headline.level(),
                         keyword,
-                        heading: title.raw.to_string()
+                        heading: title.raw.as_ref(),
                     }
             })
         })
@@ -84,12 +84,12 @@ mod tests {
     fn test_doc_with_no_headings() {
         let doc = "";
         let mut items = Vec::new();
-        doc_to_items(doc, &Default::default(), |item| items.push(item));
+        doc_to_items(doc, &Default::default(), |_| items.push(true));
         assert_eq!(items.len(), 0);
 
         let doc = "some free content"; 
         let mut items = Vec::new();
-        doc_to_items(doc, &Default::default(), |item| items.push(item));
+        doc_to_items(doc, &Default::default(), |_| items.push(true));
         assert_eq!(items.len(), 0);
     }
 
@@ -100,17 +100,17 @@ mod tests {
 * TODO Second task";
 
         let mut items = Vec::new();
-        doc_to_items(doc, &Default::default(), |item| items.push(item));
+        doc_to_items(doc, &Default::default(), |item| items.push((item.level, item.keyword.clone(), item.heading.to_string())));
 
         assert_eq!(items.len(), 2);
 
-        assert_eq!(items[0].level(), 1);
-        assert_eq!(items[0].keyword(), "TODO");
-        assert_eq!(items[0].heading(), "First task");
+        assert_eq!(items[0].0, 1);
+        assert_eq!(items[0].1.as_ref(), "TODO");
+        assert_eq!(items[0].2, "First task");
 
-        assert_eq!(items[1].level(), 1);
-        assert_eq!(items[1].keyword(), "TODO");
-        assert_eq!(items[1].heading(), "Second task");
+        assert_eq!(items[1].0, 1);
+        assert_eq!(items[1].1.as_ref(), "TODO");
+        assert_eq!(items[1].2, "Second task");
     }
 
     #[test]
@@ -121,11 +121,11 @@ mod tests {
         let config = ParserConfig::with_keywords(&["NEW", "NEXT"], &[]);
 
         let mut items = Vec::new();
-        doc_to_items(doc, &config, |item| items.push(item));
+        doc_to_items(doc, &config, |item| items.push(item.keyword.clone()));
 
         assert_eq!(items.len(), 2);
-        assert_eq!(items[0].keyword(), "NEW");
-        assert_eq!(items[1].keyword(), "NEXT");
+        assert_eq!(items[0].as_ref(), "NEW");
+        assert_eq!(items[1].as_ref(), "NEXT");
         
     }
 }

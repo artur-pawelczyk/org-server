@@ -1,6 +1,5 @@
 use axum::{Router, routing, extract, extract::State, http::StatusCode, response::Html};
 use maud::{html, Markup};
-use futures::stream::{self, StreamExt};
 
 use crate::{doc::{OrgDoc, OrgSource}, parser::{self, TodoItem, ParserConfig}};
 
