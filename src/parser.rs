@@ -1,7 +1,9 @@
+use std::{collections::HashSet, sync::Arc};
+
 use orgize::Org;
 
 #[derive(Debug)]
-pub struct TodoItem(usize, String, String);
+pub struct TodoItem(usize, Arc<str>, String);
 
 impl TodoItem {
     pub fn keyword(&self) -> &str {
@@ -17,34 +19,55 @@ impl TodoItem {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct ParserConfig(orgize::ParseConfig);
+#[derive(Debug)]
+pub struct ParserConfig {
+    keywords: HashSet<(Arc<str>, bool)>,
+    delegate: orgize::ParseConfig,
+}
+
+impl Default for ParserConfig {
+    fn default() -> Self {
+        Self::with_keywords(&["TODO"], &["DONE"])
+    }
+}
 
 impl ParserConfig {
     pub fn with_keywords(todo: &[&str], done: &[&str]) -> Self {
-        Self(orgize::ParseConfig{ todo_keywords: (todo.iter().map(|s| String::from(*s)).collect(),
-                                                  done.iter().map(|s| String::from(*s)).collect()) })
+        let delegate = orgize::ParseConfig{ todo_keywords: (todo.iter().map(|s| String::from(*s)).collect(),
+                                                            done.iter().map(|s| String::from(*s)).collect()) };
+
+        let mut keywords = HashSet::new();
+        keywords.extend(todo.iter().map(|s| (Arc::from(*s), false)));
+        keywords.extend(done.iter().map(|s| (Arc::from(*s), true)));
+
+        ParserConfig{ delegate, keywords }
     }
 
     fn as_org_config(&self) -> &orgize::ParseConfig {
-        &self.0
+        &self.delegate
+    }
+
+    fn intern_keyword(&self, keyword: &str) -> Option<Arc<str>> {
+        self.keywords.iter()
+            .find(|x| x.0.as_ref() == keyword)
+            .map(|x| Arc::clone(&x.0))
     }
 }
 
 pub fn doc_to_items(doc: &str, config: &ParserConfig) -> Vec<TodoItem> {
     let parsed = Org::parse_custom(doc, config.as_org_config());
-    let out = parsed.headlines()
+    parsed.headlines()
         .flat_map(|headline| {
             let title = headline.title(&parsed);
-            title.keyword.as_ref().map(|keyword| {
-            TodoItem(headline.level(),
-                     keyword.to_string(),
-                     title.raw.to_string())
+            title.keyword.as_ref()
+                .and_then(|keyword| config.intern_keyword(keyword))
+                .map(|keyword| {
+                    TodoItem(headline.level(),
+                             keyword,
+                             title.raw.to_string())
             })
         })
-        .collect();
-
-    dbg!(out)
+        .collect()
 }
 
 #[cfg(test)]

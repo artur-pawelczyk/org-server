@@ -13,7 +13,7 @@ impl Default for Server {
     fn default() -> Self {
         Server {
             port: 8080,
-            parser_config: Default::default(),
+            parser_config: ParserConfig::with_keywords(&["NEW", "NEXT"], &["DONE"])
         }
     }
 }
@@ -72,7 +72,7 @@ async fn list_todos<D, S>(State(source): State<&S>,
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
-    let parser_conf = ParserConfig::with_keywords(&["TODO"], &["DONE"]);
+    let parser_conf = ParserConfig::with_keywords(&["NEW", "NEXT"], &["DONE"]);
 
     let items: String = stream::iter(source.list().await.iter())
         .then(|path| source.read(path))
