@@ -72,16 +72,20 @@ async fn list_todos<D, S>(State(source): State<&S>,
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
-    let parser_conf = ParserConfig::with_keywords(&["NEW", "NEXT"], &["DONE"]);
+    // TODO: Get the config from state
+    let parser_conf = ParserConfig::with_keywords(&["TODO", "NEW", "NEXT"], &["DONE"]);
 
-    let items: String = stream::iter(source.list().await.iter())
-        .then(|path| source.read(path))
-        .flat_map(|content| stream::iter(parser::doc_to_items(content.unwrap().content(), &parser_conf)))
-        .collect::<Vec<TodoItem>>().await.iter()
-        .filter(|item| item.keyword() == keyword)
-        .map(|todo_item| format!("<li><strong>{}</strong> {}</li>", todo_item.keyword(), todo_item.heading()))
-        .collect();
-
+    let mut items = String::new();
+    for path in source.list().await {
+        let doc = source.read(&path).await.unwrap();
+        let content = doc.content();
+        parser::doc_to_items(content, &parser_conf, |item| {
+            dbg!(&item);
+            if item.keyword() == keyword {
+                items.push_str(&format!("<li><strong>{}</strong> {}</li>", item.keyword(), item.heading()));
+            }
+        });
+    }
 
     Ok(Html::from(format!("<ol>{}</ol>", items)))
 }

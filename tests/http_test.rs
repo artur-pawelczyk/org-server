@@ -55,6 +55,7 @@ async fn test_list_todo() {
     let resp = reqwest::get(format!("http://0.0.0.0:{port}/todo/TODO")).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let html = Html::parse_fragment(&resp.text().await.unwrap());
+    dbg!(html.html());
 
     let selector = Selector::parse("ol > li").unwrap();
     let elements: Vec<String> = html.select(&selector)

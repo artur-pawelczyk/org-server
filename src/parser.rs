@@ -3,19 +3,23 @@ use std::{collections::HashSet, sync::Arc};
 use orgize::Org;
 
 #[derive(Debug)]
-pub struct TodoItem(usize, Arc<str>, String);
+pub struct TodoItem{
+    level: usize,
+    keyword: Arc<str>,
+    heading: String,
+}
 
 impl TodoItem {
     pub fn keyword(&self) -> &str {
-        &self.1
+        &self.keyword
     }
 
     pub fn heading(&self) -> &str {
-        &self.2
+        &self.heading
     }
 
     fn level(&self) -> usize {
-        self.0
+        self.level
     }
 }
 
@@ -54,7 +58,7 @@ impl ParserConfig {
     }
 }
 
-pub fn doc_to_items(doc: &str, config: &ParserConfig) -> Vec<TodoItem> {
+pub fn doc_to_items(doc: &str, config: &ParserConfig, mut consumer: impl FnMut(TodoItem)) {
     let parsed = Org::parse_custom(doc, config.as_org_config());
     parsed.headlines()
         .flat_map(|headline| {
@@ -62,12 +66,14 @@ pub fn doc_to_items(doc: &str, config: &ParserConfig) -> Vec<TodoItem> {
             title.keyword.as_ref()
                 .and_then(|keyword| config.intern_keyword(keyword))
                 .map(|keyword| {
-                    TodoItem(headline.level(),
-                             keyword,
-                             title.raw.to_string())
+                    TodoItem{
+                        level: headline.level(),
+                        keyword,
+                        heading: title.raw.to_string()
+                    }
             })
         })
-        .collect()
+        .for_each(|item| consumer(item))
 }
 
 #[cfg(test)]
@@ -77,12 +83,14 @@ mod tests {
     #[test]
     fn test_doc_with_no_headings() {
         let doc = "";
-        let items = doc_to_items(doc, &Default::default()).len();
-        assert_eq!(items, 0);
+        let mut items = Vec::new();
+        doc_to_items(doc, &Default::default(), |item| items.push(item));
+        assert_eq!(items.len(), 0);
 
         let doc = "some free content"; 
-        let items = doc_to_items(doc, &Default::default()).len();
-        assert_eq!(items, 0);
+        let mut items = Vec::new();
+        doc_to_items(doc, &Default::default(), |item| items.push(item));
+        assert_eq!(items.len(), 0);
     }
 
     #[test]
@@ -91,7 +99,9 @@ mod tests {
 * TODO First task
 * TODO Second task";
 
-        let items: Vec<_> = doc_to_items(doc, &Default::default());
+        let mut items = Vec::new();
+        doc_to_items(doc, &Default::default(), |item| items.push(item));
+
         assert_eq!(items.len(), 2);
 
         assert_eq!(items[0].level(), 1);
@@ -110,7 +120,8 @@ mod tests {
 * NEXT Second task";
         let config = ParserConfig::with_keywords(&["NEW", "NEXT"], &[]);
 
-        let items = doc_to_items(doc, &config);
+        let mut items = Vec::new();
+        doc_to_items(doc, &config, |item| items.push(item));
 
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].keyword(), "NEW");
