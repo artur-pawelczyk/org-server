@@ -42,8 +42,9 @@ async fn render_index<D, S>(State(source): State<&S>) -> Markup
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
-    let docs: Vec<_> = source.list().await.iter()
-        .map(|doc| (source.doc_name(&doc), format!("{doc}")))
+    let paths = source.list().await;
+    let docs: Vec<_> = paths.iter()
+        .map(|path| (source.doc_name(path), path))
         .collect();
 
     html! {

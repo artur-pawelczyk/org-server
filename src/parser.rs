@@ -66,15 +66,14 @@ pub fn doc_to_items(doc: &str, config: &ParserConfig, mut consumer: impl FnMut(T
     let parsed = Org::parse_custom(doc, config.as_org_config());
     for headline in parsed.headlines() {
         let title = headline.title(&parsed);
-        title.keyword.as_ref()
-            .and_then(|keyword| config.intern_keyword(keyword))
-            .map(|keyword| {
-                consumer(TodoItem{
-                    level: headline.level(),
-                    keyword,
-                    heading: title.raw.as_ref(),
-                })
+        if let Some(keyword) = title.keyword.as_ref().and_then(|keyword| config.intern_keyword(keyword)) {
+            consumer(TodoItem{
+                level: headline.level(),
+                keyword,
+                heading: title.raw.as_ref(),
             });
+        }
+
     }
 }
 

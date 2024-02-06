@@ -20,7 +20,7 @@ impl OrgDoc for FilesystemDoc {
 impl<'a> FilesystemSource<'a> {
     pub fn new(path: &'a Path) -> Self {
         assert!(path.is_absolute());
-        Self(path.as_ref())
+        Self(path)
     }
 }
 
