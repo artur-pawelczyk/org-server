@@ -1,7 +1,7 @@
 use axum::{Router, routing, extract, extract::State, http::StatusCode, response::Html};
 use maud::{html, Markup};
 
-use crate::{doc::{OrgDoc, OrgSource}, parser::{self, TodoItem, ParserConfig}};
+use crate::{doc::{OrgDoc, OrgSource}, parser::{self, ParserConfig}};
 
 pub struct Server {
     pub port: u16,

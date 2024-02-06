@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc, borrow::Cow};
+use std::{collections::HashMap, sync::Arc};
 
 use orgize::Org;
 
@@ -24,8 +24,14 @@ impl<'a> TodoItem<'a> {
 }
 
 #[derive(Debug)]
+enum KeywordState {
+    Todo,
+    Completed,
+}
+
+#[derive(Debug)]
 pub struct ParserConfig {
-    keywords: HashSet<(Arc<str>, bool)>,
+    keywords: HashMap<Arc<str>, KeywordState>,
     delegate: orgize::ParseConfig,
 }
 
@@ -40,9 +46,9 @@ impl ParserConfig {
         let delegate = orgize::ParseConfig{ todo_keywords: (todo.iter().map(|s| String::from(*s)).collect(),
                                                             done.iter().map(|s| String::from(*s)).collect()) };
 
-        let mut keywords = HashSet::new();
-        keywords.extend(todo.iter().map(|s| (Arc::from(*s), false)));
-        keywords.extend(done.iter().map(|s| (Arc::from(*s), true)));
+        let mut keywords = HashMap::new();
+        keywords.extend(todo.iter().map(|s| (Arc::from(*s), KeywordState::Todo)));
+        keywords.extend(done.iter().map(|s| (Arc::from(*s), KeywordState::Completed)));
 
         ParserConfig{ delegate, keywords }
     }
@@ -52,28 +58,24 @@ impl ParserConfig {
     }
 
     fn intern_keyword(&self, keyword: &str) -> Option<Arc<str>> {
-        self.keywords.iter()
-            .find(|x| x.0.as_ref() == keyword)
-            .map(|x| Arc::clone(&x.0))
+        self.keywords.get_key_value(keyword).map(|(k, _)| k).map(Arc::clone)
     }
 }
 
 pub fn doc_to_items(doc: &str, config: &ParserConfig, mut consumer: impl FnMut(TodoItem)) {
     let parsed = Org::parse_custom(doc, config.as_org_config());
-    parsed.headlines()
-        .flat_map(|headline| {
-            let title = headline.title(&parsed);
-            title.keyword.as_ref()
-                .and_then(|keyword| config.intern_keyword(keyword))
-                .map(|keyword| {
-                    TodoItem{
-                        level: headline.level(),
-                        keyword,
-                        heading: title.raw.as_ref(),
-                    }
-            })
-        })
-        .for_each(|item| consumer(item))
+    for headline in parsed.headlines() {
+        let title = headline.title(&parsed);
+        title.keyword.as_ref()
+            .and_then(|keyword| config.intern_keyword(keyword))
+            .map(|keyword| {
+                consumer(TodoItem{
+                    level: headline.level(),
+                    keyword,
+                    heading: title.raw.as_ref(),
+                })
+            });
+    }
 }
 
 #[cfg(test)]
