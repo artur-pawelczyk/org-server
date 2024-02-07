@@ -1,5 +1,5 @@
-use axum::{Router, routing, extract, extract::State, http::StatusCode, response::Html};
-use maud::{html, Markup};
+use axum::{Router, routing, extract, extract::State, http::{StatusCode, Request}, response::{Html, Response}, middleware::{Next, self}, body::{Body, HttpBody}};
+use maud::{html, Markup, PreEscaped};
 
 use crate::{doc::{OrgDoc, OrgSource}, parser::{self, ParserConfig}};
 
@@ -68,18 +68,18 @@ where D: OrgDoc,
 }
 
 async fn render_doc<D, S>(State(state): State<&ServerState<D, S>>,
-                       extract::Path(filename): extract::Path<String>) -> Result<String, StatusCode>
+                       extract::Path(filename): extract::Path<String>) -> Result<Markup, StatusCode>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
     let filename = format!("/{filename}");
     state.source.read(&filename).await
-        .map(|doc| doc.content().to_string())
+        .map(|doc| html!{ pre { (doc.content()) } })
         .map_err(|_| StatusCode::NOT_FOUND)
 }
 
 async fn list_todos<D, S>(State(state): State<&ServerState<D, S>>,
-                          extract::Path(keyword): extract::Path<String>) -> Result<Html<String>, StatusCode>
+                          extract::Path(keyword): extract::Path<String>) -> Result<Markup, StatusCode>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
@@ -88,12 +88,15 @@ where D: OrgDoc,
         let doc = state.source.read(&path).await.unwrap();
         let content = doc.content();
         parser::doc_to_items(content, &state.parser_config, |item| {
-            dbg!(&item);
             if item.keyword() == keyword {
                 items.push_str(&format!("<li><strong>{}</strong> {}</li>", item.keyword(), item.heading()));
             }
         });
     }
 
-    Ok(Html::from(format!("<ol>{}</ol>", items)))
+    Ok(html! {
+        ol {
+            (PreEscaped(items))
+        }
+    })
 }
