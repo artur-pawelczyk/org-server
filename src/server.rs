@@ -18,11 +18,14 @@ impl Default for Server {
 }
 
 impl Server {
-    pub async fn start<D, S>(&self, source: S) -> Result<(), Box<dyn std::error::Error>>
+    pub async fn start<D, S>(self, source: S) -> Result<(), Box<dyn std::error::Error>>
     where D: OrgDoc + 'static,
           S: OrgSource<Doc = D> + 'static
     {
-        let state = Box::leak(Box::new(source));
+        let state = Box::leak(Box::new(ServerState{
+            source, parser_config: self.parser_config,
+        }));
+
         let app = Router::new()
             .route("/", routing::get(render_index))
             .route("/:filename", routing::get(render_doc))
@@ -38,13 +41,21 @@ impl Server {
     }
 }
 
-async fn render_index<D, S>(State(source): State<&S>) -> Markup
+struct ServerState<D, S>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
-    let paths = source.list().await;
+    source: S,
+    parser_config: ParserConfig,
+}
+
+async fn render_index<D, S>(State(state): State<&ServerState<D, S>>) -> Markup
+where D: OrgDoc,
+      S: OrgSource<Doc = D>
+{
+    let paths = state.source.list().await;
     let docs: Vec<_> = paths.iter()
-        .map(|path| (source.doc_name(path), path))
+        .map(|path| (state.source.doc_name(path), path))
         .collect();
 
     html! {
@@ -56,30 +67,27 @@ where D: OrgDoc,
     }
 }
 
-async fn render_doc<D, S>(State(source): State<&S>,
+async fn render_doc<D, S>(State(state): State<&ServerState<D, S>>,
                        extract::Path(filename): extract::Path<String>) -> Result<String, StatusCode>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
     let filename = format!("/{filename}");
-    source.read(&filename).await
+    state.source.read(&filename).await
         .map(|doc| doc.content().to_string())
         .map_err(|_| StatusCode::NOT_FOUND)
 }
 
-async fn list_todos<D, S>(State(source): State<&S>,
+async fn list_todos<D, S>(State(state): State<&ServerState<D, S>>,
                           extract::Path(keyword): extract::Path<String>) -> Result<Html<String>, StatusCode>
 where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
-    // TODO: Get the config from state
-    let parser_conf = ParserConfig::with_keywords(&["TODO", "NEW", "NEXT"], &["DONE"]);
-
     let mut items = String::new();
-    for path in source.list().await {
-        let doc = source.read(&path).await.unwrap();
+    for path in state.source.list().await {
+        let doc = state.source.read(&path).await.unwrap();
         let content = doc.content();
-        parser::doc_to_items(content, &parser_conf, |item| {
+        parser::doc_to_items(content, &state.parser_config, |item| {
             dbg!(&item);
             if item.keyword() == keyword {
                 items.push_str(&format!("<li><strong>{}</strong> {}</li>", item.keyword(), item.heading()));
