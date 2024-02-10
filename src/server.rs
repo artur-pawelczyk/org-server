@@ -1,4 +1,4 @@
-use axum::{Router, routing, extract, extract::State, http::{StatusCode, Request}, response::{Html, Response}, middleware::{Next, self}, body::{Body, HttpBody}};
+use axum::{Router, routing, extract, extract::State, http::StatusCode};
 use maud::{html, Markup, PreEscaped};
 
 use crate::{doc::{OrgDoc, OrgSource}, parser::{self, ParserConfig}};
