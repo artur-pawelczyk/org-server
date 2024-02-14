@@ -1,7 +1,7 @@
 use axum::{Router, routing, extract, extract::State, http::StatusCode};
 use maud::{html, Markup, PreEscaped};
 
-use crate::{doc::{OrgDoc, OrgSource}, parser::{self, ParserConfig}};
+use crate::{doc::{OrgDoc, OrgSource}, parser::{self, ParserConfig}, page::Page};
 
 pub struct Server {
     pub port: u16,
@@ -58,13 +58,14 @@ where D: OrgDoc,
         .map(|path| (state.source.doc_name(path), path))
         .collect();
 
-    html! {
+    let page = Page::default();
+    page.render(html! {
         ul {
             @for doc in docs {
                 li { a href = (doc.1) { (doc.0) } }
             }
         }
-    }
+    })
 }
 
 async fn render_doc<D, S>(State(state): State<&ServerState<D, S>>,
@@ -73,9 +74,11 @@ where D: OrgDoc,
       S: OrgSource<Doc = D>
 {
     let filename = format!("/{filename}");
-    state.source.read(&filename).await
-        .map(|doc| html!{ pre { (doc.content()) } })
-        .map_err(|_| StatusCode::NOT_FOUND)
+    let page = Page::default();
+    match state.source.read(&filename).await {
+        Ok(doc) => Ok(page.render(html! { pre { (doc.content()) } })),
+        Err(_) => Err(StatusCode::NOT_FOUND)
+    }
 }
 
 async fn list_todos<D, S>(State(state): State<&ServerState<D, S>>,
@@ -94,9 +97,10 @@ where D: OrgDoc,
         });
     }
 
-    Ok(html! {
+    let page = Page::default();
+    Ok(page.render(html! {
         ol {
             (PreEscaped(items))
         }
-    })
+    }))
 }

@@ -4,6 +4,7 @@ mod fs_doc;
 mod render;
 mod server;
 mod parser;
+mod page;
 
 use std::path::Path;
 
